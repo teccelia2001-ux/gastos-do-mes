@@ -1,0 +1,987 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gastos do Mês</title>
+<meta name="description" content="Controle dos gastos do mês com orçamento, categorias e contas a pagar.">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121a2b" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="logo-gastos.svg">
+<link rel="apple-touch-icon" href="icones/icone-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Gastos">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: coluna única de celular (máx. 640px), resumo no topo, lançamentos por dia, botão flutuante para lançar. Skin do Sistema de Programação Teccel. */
+:root {
+  --brand: #e11414;
+  --brand-600: #c50f0f;
+  --brand-soft: #fef2f2;
+  --brand-ring: rgba(225, 20, 20, 0.18);
+  --bg: #f6f8fb;
+  --surface: #ffffff;
+  --surface-2: #fbfcfe;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --text-soft: #94a3b8;
+  --border: #e7ecf3;
+  --border-strong: #d8e0ea;
+  --track: #edf1f7;
+  --green: #16a34a;
+  --green-bg: #dcfce7;
+  --amber: #b45309;
+  --amber-bg: #fef3c7;
+  --red: #dc2626;
+  --red-bg: #fee2e2;
+  --scrim: rgba(15, 23, 42, 0.45);
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 18px 48px rgba(15, 23, 42, 0.18);
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --brand: #ef3b3b; --brand-600: #f25555; --brand-soft: #3a1416; --brand-ring: rgba(239, 59, 59, 0.28);
+    --bg: #0b1220; --surface: #121a2b; --surface-2: #0f1727; --text: #e6ebf3; --text-muted: #9aa8bc; --text-soft: #6b7a90;
+    --border: #1f2a3d; --border-strong: #2b384e; --track: #1c2638;
+    --green: #4ade80; --green-bg: #12301f; --amber: #fbbf24; --amber-bg: #3a2c0c; --red: #f87171; --red-bg: #3b1518;
+    --scrim: rgba(0, 0, 0, 0.6); --shadow-sm: 0 1px 2px rgba(0,0,0,.3); --shadow: 0 4px 16px rgba(0,0,0,.35); --shadow-lg: 0 18px 48px rgba(0,0,0,.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --brand: #ef3b3b; --brand-600: #f25555; --brand-soft: #3a1416; --brand-ring: rgba(239, 59, 59, 0.28);
+  --bg: #0b1220; --surface: #121a2b; --surface-2: #0f1727; --text: #e6ebf3; --text-muted: #9aa8bc; --text-soft: #6b7a90;
+  --border: #1f2a3d; --border-strong: #2b384e; --track: #1c2638;
+  --green: #4ade80; --green-bg: #12301f; --amber: #fbbf24; --amber-bg: #3a2c0c; --red: #f87171; --red-bg: #3b1518;
+  --scrim: rgba(0, 0, 0, 0.6); --shadow-sm: 0 1px 2px rgba(0,0,0,.3); --shadow: 0 4px 16px rgba(0,0,0,.35); --shadow-lg: 0 18px 48px rgba(0,0,0,.5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+[hidden] { display: none !important; }
+img, svg { max-width: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  z-index: 10; background: var(--surface);
+}
+
+/* Topo */
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.wrap {
+  max-width: 640px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.topbar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 12px; }
+.mark {
+  width: 42px; height: 42px; flex-shrink: 0;
+  border-radius: 12px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+}
+.mark .logo { width: 100%; height: 100%; display: block; }
+.brand-text { min-width: 0; flex: 1; }
+.brand-text h1 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
+.brand-text p { margin: 0; font-size: 12.5px; color: var(--text-muted); font-weight: 500; }
+.icon-btn {
+  width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+  border: 1px solid var(--border-strong); background: var(--surface);
+  color: var(--text-muted); display: grid; place-items: center;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.icon-btn:hover { background: var(--brand-soft); border-color: var(--brand-ring); color: var(--brand); }
+.icon-btn svg { width: 20px; height: 20px; }
+
+main.wrap { display: flex; flex-direction: column; gap: 16px; padding-block: 16px 120px; }
+
+/* Seletor de mês */
+.month {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.month-label { text-align: center; flex: 1; }
+.month-label strong { display: block; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+.month-label span { font-size: 12.5px; color: var(--text-muted); font-weight: 500; }
+
+/* Cartão de resumo */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+.hero { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-soft); }
+.hero-total { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.hero-sub { font-size: 13.5px; color: var(--text-muted); font-weight: 500; }
+.bar { height: 10px; background: var(--track); border-radius: 999px; overflow: hidden; }
+.bar > i { display: block; height: 100%; border-radius: inherit; background: var(--green); transition: width .4s ease; }
+.bar.warn > i { background: var(--amber); }
+.bar.over > i { background: var(--red); }
+.bar-legend { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--text-muted); font-weight: 600; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--border); }
+.stat { padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat + .stat { border-left: 1px solid var(--border); }
+.stat span { font-size: 11px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.05em; }
+.stat strong { font-size: clamp(13px, 3.6vw, 15.5px); letter-spacing: -0.01em; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pos { color: var(--green); }
+.neg { color: var(--red); }
+.due { color: var(--amber); }
+
+/* Seções */
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 2px; }
+.section-head h2 { margin: 0; font-size: 15px; font-weight: 800; }
+.section-head small { font-size: 12.5px; color: var(--text-muted); font-weight: 600; }
+
+.cats { padding: 6px 16px; }
+.cat-row { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; padding: 12px 0; align-items: center; }
+.cat-row + .cat-row { border-top: 1px solid var(--border); }
+.cat-name { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; min-width: 0; }
+.dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.cat-val { font-weight: 700; font-size: 14px; text-align: right; }
+.cat-val small { display: block; font-size: 11.5px; color: var(--text-soft); font-weight: 600; }
+.cat-row .bar { grid-column: 1 / -1; height: 6px; }
+
+/* Filtros */
+.chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex-shrink: 0; border: 1px solid var(--border-strong); background: var(--surface);
+  color: var(--text-muted); border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 600;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.chip[aria-pressed="true"] { background: var(--brand-soft); border-color: var(--brand); color: var(--brand); }
+
+/* Lista */
+.day { display: flex; flex-direction: column; gap: 8px; }
+.day-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 2px 0; }
+.list { overflow: hidden; }
+.item {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center;
+  padding: 12px 14px; width: 100%; text-align: left; background: transparent; border: 0;
+  transition: background .15s;
+}
+.item + .item { border-top: 1px solid var(--border); }
+.item:hover { background: var(--surface-2); }
+.avatar {
+  width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
+  font-size: 13px; font-weight: 800; color: #fff;
+}
+.item-main { min-width: 0; }
+.item-main strong { display: block; font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-main span { display: block; font-size: 12.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.item-side b { font-size: 14.5px; font-weight: 800; white-space: nowrap; }
+.pill { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 0; white-space: nowrap; }
+.pill.paid { background: var(--green-bg); color: var(--green); }
+.pill.open { background: var(--amber-bg); color: var(--amber); }
+.tag-fixo { font-size: 10.5px; font-weight: 700; color: var(--text-soft); border: 1px solid var(--border-strong); border-radius: 5px; padding: 0 5px; margin-left: 6px; vertical-align: 1px; }
+
+.empty { padding: 28px 20px; text-align: center; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.empty strong { font-size: 15px; }
+.empty p { margin: 0; color: var(--text-muted); font-size: 13.5px; max-width: 34ch; }
+.empty .btn { margin-top: 8px; }
+
+.notice { padding: 12px 14px; border-radius: var(--radius); background: var(--amber-bg); color: var(--amber); font-size: 13.5px; font-weight: 600; }
+
+/* Botões */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46px; padding: 0 18px; border-radius: var(--radius); border: 1px solid transparent;
+  font-weight: 700; font-size: 15px; transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+}
+.btn-primary { background: var(--brand); color: #fff; box-shadow: 0 6px 16px var(--brand-ring); }
+.btn-primary:hover { background: var(--brand-600); }
+.btn-ghost { background: var(--surface); border-color: var(--border-strong); color: var(--text); }
+.btn-ghost:hover { background: var(--surface-2); }
+.btn-danger { background: var(--surface); border-color: var(--red-bg); color: var(--red); }
+.btn-danger.confirm { background: var(--red); color: #fff; border-color: var(--red); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+
+.fab {
+  position: fixed; z-index: 6;
+  right: max(16px, calc(env(safe-area-inset-right, 0px) + 16px));
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  border-radius: 999px; padding: 0 22px; min-height: 54px; font-size: 15.5px;
+  box-shadow: var(--shadow-lg);
+}
+.fab svg { width: 20px; height: 20px; }
+
+/* Folha (bottom sheet) */
+.scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 20; animation: fade .18s ease; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 21;
+  max-height: 92dvh; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--surface); border-radius: 20px 20px 0 0; box-shadow: var(--shadow-lg);
+  animation: up .22s ease;
+}
+.sheet-inner {
+  max-width: 640px; margin: 0 auto;
+  padding-left: max(18px, env(safe-area-inset-left, 0px));
+  padding-right: max(18px, env(safe-area-inset-right, 0px));
+  padding-block: 10px calc(env(safe-area-inset-bottom, 0px) + 18px);
+  display: flex; flex-direction: column; gap: 16px;
+}
+.grip { width: 40px; height: 5px; border-radius: 99px; background: var(--border-strong); margin: 0 auto; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.sheet-head h3 { margin: 0; font-size: 18px; font-weight: 800; }
+@keyframes up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fade { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field > label, .field > .label { font-size: 12.5px; font-weight: 700; color: var(--text-muted); }
+.input {
+  width: 100%; min-height: 48px; padding: 0 14px; border-radius: var(--radius);
+  border: 1px solid var(--border-strong); background: var(--surface); font-size: 16px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-ring); }
+.money-input { position: relative; }
+.money-input span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-weight: 700; color: var(--text-muted); }
+.money-input .input { padding-left: 44px; font-size: 24px; font-weight: 800; min-height: 58px; }
+.row2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.choice { display: flex; flex-wrap: wrap; gap: 8px; }
+.choice .chip { display: inline-flex; align-items: center; gap: 7px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--track); border-radius: var(--radius); padding: 4px; gap: 4px; }
+.seg button { border: 0; background: transparent; border-radius: 9px; min-height: 40px; font-weight: 700; color: var(--text-muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.check { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; }
+.check input { width: 20px; height: 20px; accent-color: var(--brand); }
+.hint { font-size: 12.5px; color: var(--text-muted); margin: 0; }
+.err { font-size: 13px; color: var(--red); font-weight: 600; margin: 0; }
+.actions { display: flex; gap: 10px; }
+.actions .btn { flex: 1; }
+
+/* Tela de entrada */
+.login {
+  min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  display: grid; place-items: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px;
+}
+.login-card { width: 100%; max-width: 400px; padding: 28px 22px; display: flex; flex-direction: column; gap: 18px; }
+.login-top { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.login-top .mark { width: 76px; height: 76px; border-radius: 20px; }
+.login-top h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+.login-top p { margin: 0; color: var(--text-muted); font-size: 14px; }
+.link-btn { background: none; border: 0; color: var(--brand); font-weight: 700; padding: 6px; }
+.login .btn { width: 100%; }
+.conta { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 13.5px; color: var(--text-muted); }
+.conta b { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 30;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 90px);
+  background: var(--text); color: var(--bg); font-weight: 600; font-size: 14px;
+  padding: 10px 16px; border-radius: 999px; box-shadow: var(--shadow-lg); white-space: nowrap;
+}
+</style>
+</head>
+<body>
+
+<section class="login" id="login" hidden>
+  <form class="card login-card" id="f-login" novalidate>
+    <div class="login-top">
+      <div class="mark"><svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Gastos do Mês">
+  <defs>
+    <linearGradient id="gm-bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fde047"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="gm-coin2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffbe6"/>
+      <stop offset="1" stop-color="#fcd34d"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="url(#gm-bg2)"/>
+  <path d="M0 30 Q24 22 48 34 V36 Q48 48 36 48 H12 Q0 48 0 36Z" fill="#f59e0b" opacity=".45"/>
+  <ellipse cx="23.5" cy="39.5" rx="13" ry="2.6" fill="#92400e" opacity=".3"/>
+  <circle cx="23.6" cy="24.4" r="13.4" fill="#92400e"/>
+  <circle cx="22" cy="22.6" r="13.4" fill="url(#gm-coin2)" stroke="#78350f" stroke-width="2"/>
+  <circle cx="22" cy="22.6" r="9.9" fill="none" stroke="#d97706" stroke-width="1.3" stroke-dasharray="1.5 1.7"/>
+  <path d="M26.2 17.6c-.9-1.1-2.4-1.8-4.2-1.8-2.6 0-4.3 1.4-4.3 3.3 0 4.6 8.8 2.6 8.8 7.1 0 2-1.9 3.4-4.5 3.4-2 0-3.7-.8-4.7-2.2M22 13.3v2.5M22 29.6v2.6" fill="none" stroke="#78350f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M39.5 6.5l1.2 3.1 3.1 1.2-3.1 1.2-1.2 3.1-1.2-3.1-3.1-1.2 3.1-1.2z" fill="#ffffff"/>
+  <circle cx="35" cy="17" r="1.2" fill="#ffffff" opacity=".85"/>
+</svg></div>
+      <h1>Gastos do Mês</h1>
+      <p id="login-sub">Entre para ver e lançar seus gastos.</p>
+    </div>
+    <div class="field"><label for="l-email">E-mail</label>
+      <input class="input" id="l-email" type="email" autocomplete="username" inputmode="email" placeholder="seu@email.com"></div>
+    <div class="field"><label for="l-senha">Senha</label>
+      <input class="input" id="l-senha" type="password" autocomplete="current-password" placeholder="Mínimo de 6 caracteres"></div>
+    <p class="err" id="l-err" hidden></p>
+    <button type="submit" class="btn btn-primary" id="l-btn">Entrar</button>
+    <p class="hint" style="text-align:center"><span id="l-troca-txt">Primeira vez aqui?</span> <button type="button" class="link-btn" id="l-troca">Criar conta</button></p>
+  </form>
+</section>
+
+<header class="topbar" id="topo" hidden>
+  <div class="wrap">
+    <div class="mark"><svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Gastos do Mês">
+  <defs>
+    <linearGradient id="gm-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fde047"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="gm-coin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffbe6"/>
+      <stop offset="1" stop-color="#fcd34d"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="url(#gm-bg)"/>
+  <path d="M0 30 Q24 22 48 34 V36 Q48 48 36 48 H12 Q0 48 0 36Z" fill="#f59e0b" opacity=".45"/>
+  <ellipse cx="23.5" cy="39.5" rx="13" ry="2.6" fill="#92400e" opacity=".3"/>
+  <circle cx="23.6" cy="24.4" r="13.4" fill="#92400e"/>
+  <circle cx="22" cy="22.6" r="13.4" fill="url(#gm-coin)" stroke="#78350f" stroke-width="2"/>
+  <circle cx="22" cy="22.6" r="9.9" fill="none" stroke="#d97706" stroke-width="1.3" stroke-dasharray="1.5 1.7"/>
+  <path d="M26.2 17.6c-.9-1.1-2.4-1.8-4.2-1.8-2.6 0-4.3 1.4-4.3 3.3 0 4.6 8.8 2.6 8.8 7.1 0 2-1.9 3.4-4.5 3.4-2 0-3.7-.8-4.7-2.2M22 13.3v2.5M22 29.6v2.6" fill="none" stroke="#78350f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M39.5 6.5l1.2 3.1 3.1 1.2-3.1 1.2-1.2 3.1-1.2-3.1-3.1-1.2 3.1-1.2z" fill="#ffffff"/>
+  <circle cx="35" cy="17" r="1.2" fill="#ffffff" opacity=".85"/>
+</svg></div>
+    <div class="brand-text">
+      <h1>Gastos do Mês</h1>
+      <p>Controle financeiro pessoal</p>
+    </div>
+    <button class="icon-btn" id="btn-config" aria-label="Renda e orçamento" title="Renda e orçamento">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="wrap" id="app" hidden>
+  <div class="month">
+    <button class="icon-btn" id="prev" aria-label="Mês anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <div class="month-label"><strong id="month-name">—</strong><span id="month-meta">Carregando…</span></div>
+    <button class="icon-btn" id="next" aria-label="Próximo mês"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+  </div>
+
+  <div id="notice" class="notice" hidden></div>
+
+  <section class="card">
+    <div class="hero">
+      <div>
+        <div class="eyebrow">Gasto no mês</div>
+        <div class="hero-total num" id="total">R$ 0,00</div>
+        <div class="hero-sub" id="hero-sub">Defina um orçamento em Renda e orçamento</div>
+      </div>
+      <div class="bar" id="budget-bar"><i style="width:0%"></i></div>
+      <div class="bar-legend num"><span id="budget-pct">0% do orçamento</span><span id="budget-left"></span></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span>Renda</span><strong class="num" id="s-renda">—</strong></div>
+      <div class="stat"><span>Saldo</span><strong class="num" id="s-saldo">—</strong></div>
+      <div class="stat"><span>A pagar</span><strong class="num due" id="s-pagar">R$ 0,00</strong></div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:10px">
+    <div class="section-head"><h2>Por categoria</h2><small id="cat-count"></small></div>
+    <div class="card cats" id="cats"></div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:10px">
+    <div class="section-head"><h2>Lançamentos</h2><small id="list-count"></small></div>
+    <div class="chips" role="group" aria-label="Filtrar lançamentos">
+      <button class="chip" data-filter="todos" aria-pressed="true">Todos</button>
+      <button class="chip" data-filter="pagar" aria-pressed="false">A pagar</button>
+      <button class="chip" data-filter="pagos" aria-pressed="false">Pagos</button>
+      <button class="chip" data-filter="fixos" aria-pressed="false">Fixos</button>
+    </div>
+    <div id="list" style="display:flex;flex-direction:column;gap:14px"></div>
+  </section>
+</main>
+
+<button class="btn btn-primary fab" id="btn-novo" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  Novo gasto
+</button>
+
+<div id="layer"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(() => {
+  const CATS = [
+    { id: "moradia", nome: "Moradia", cor: "#e11414" },
+    { id: "mercado", nome: "Mercado", cor: "#f97316" },
+    { id: "alimentacao", nome: "Alimentação", cor: "#f59e0b" },
+    { id: "transporte", nome: "Transporte", cor: "#3b82f6" },
+    { id: "contas", nome: "Contas (luz, água, net)", cor: "#0ea5e9" },
+    { id: "saude", nome: "Saúde", cor: "#16a34a" },
+    { id: "educacao", nome: "Educação", cor: "#7c3aed" },
+    { id: "lazer", nome: "Lazer", cor: "#db2777" },
+    { id: "cartao", nome: "Cartão de crédito", cor: "#475569" },
+    { id: "outros", nome: "Outros", cor: "#94a3b8" },
+  ];
+  const FORMAS = ["Pix", "Débito", "Crédito", "Dinheiro", "Boleto"];
+  const catById = id => CATS.find(c => c.id === id) || CATS[CATS.length - 1];
+
+  const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  const money = v => brl.format(v || 0);
+  const monthFmt = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
+  const dayFmt = new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" });
+  const pad = n => String(n).padStart(2, "0");
+  const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+  const shiftMonth = (ym, k) => { const [y, m] = ym.split("-").map(Number); const d = new Date(Date.UTC(y, m - 1 + k, 1)); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}`; };
+  const monthDate = ym => new Date(ym + "-01T00:00:00Z");
+  const parseValor = s => {
+    s = String(s || "").trim().replace(/[R$\s]/g, "");
+    if (!s) return NaN;
+    if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+    const n = Number(s);
+    return Number.isFinite(n) ? Math.round(n * 100) / 100 : NaN;
+  };
+  const fmtInput = v => (v == null || v === "") ? "" : String(v.toFixed ? v.toFixed(2) : v).replace(".", ",");
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  const state = {
+    mes: today().slice(0, 7),
+    gastos: [],
+    config: {},
+    filtro: "todos",
+    carregado: false,
+    db: null,
+  };
+
+  const $ = id => document.getElementById(id);
+
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), 2200);
+  }
+
+  function mesConfig(ym) {
+    const c = state.config || {};
+    const m = (c.meses || {})[ym] || {};
+    return {
+      renda: m.renda ?? c.rendaPadrao ?? null,
+      orcamento: m.orcamento ?? c.orcamentoPadrao ?? null,
+    };
+  }
+
+  function doMes(ym) { return state.gastos.filter(g => g.mes === ym); }
+
+  function render() {
+    const ym = state.mes;
+    const d = monthDate(ym);
+    const nomeMes = monthFmt.format(d);
+    $("month-name").textContent = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
+    const gastos = doMes(ym);
+    const total = gastos.reduce((s, g) => s + (g.valor || 0), 0);
+    const aPagar = gastos.filter(g => !g.pago).reduce((s, g) => s + (g.valor || 0), 0);
+    const { renda, orcamento } = mesConfig(ym);
+
+    $("month-meta").textContent = state.carregado
+      ? `${gastos.length} ${gastos.length === 1 ? "lançamento" : "lançamentos"}`
+      : "Carregando…";
+
+    $("total").textContent = money(total);
+    const bar = $("budget-bar");
+    if (orcamento) {
+      const pct = total / orcamento * 100;
+      bar.firstElementChild.style.width = Math.min(pct, 100) + "%";
+      bar.className = "bar" + (pct > 100 ? " over" : pct >= 80 ? " warn" : "");
+      $("hero-sub").textContent = `de ${money(orcamento)} de orçamento`;
+      $("budget-pct").textContent = `${Math.round(pct)}% do orçamento`;
+      const rest = orcamento - total;
+      $("budget-left").textContent = rest >= 0 ? `Restam ${money(rest)}` : `Passou ${money(-rest)}`;
+      $("budget-left").className = rest >= 0 ? "" : "neg";
+    } else {
+      bar.firstElementChild.style.width = "0%"; bar.className = "bar";
+      $("hero-sub").textContent = "Defina um orçamento no botão de ajustes, no topo";
+      $("budget-pct").textContent = "Sem orçamento";
+      $("budget-left").textContent = "";
+    }
+    $("s-renda").textContent = renda ? money(renda) : "—";
+    const saldo = renda ? renda - total : null;
+    $("s-saldo").textContent = saldo == null ? "—" : money(saldo);
+    $("s-saldo").className = "num " + (saldo == null ? "" : saldo >= 0 ? "pos" : "neg");
+    $("s-pagar").textContent = money(aPagar);
+
+    // Categorias
+    const porCat = {};
+    gastos.forEach(g => { porCat[g.categoria] = (porCat[g.categoria] || 0) + (g.valor || 0); });
+    const linhas = Object.entries(porCat).sort((a, b) => b[1] - a[1]);
+    const maior = linhas.length ? linhas[0][1] : 0;
+    $("cat-count").textContent = linhas.length ? `${linhas.length} ${linhas.length === 1 ? "categoria" : "categorias"}` : "";
+    $("cats").innerHTML = linhas.length ? linhas.map(([id, v]) => {
+      const c = catById(id);
+      const pct = total ? Math.round(v / total * 100) : 0;
+      return `<div class="cat-row">
+        <div class="cat-name"><span class="dot" style="background:${c.cor}"></span><span>${esc(c.nome)}</span></div>
+        <div class="cat-val num">${money(v)}<small>${pct}% do mês</small></div>
+        <div class="bar"><i style="width:${maior ? v / maior * 100 : 0}%;background:${c.cor}"></i></div>
+      </div>`;
+    }).join("") : `<div class="empty"><p>As categorias aparecem aqui conforme você lança os gastos.</p></div>`;
+
+    // Lista
+    let lista = gastos.slice();
+    if (state.filtro === "pagar") lista = lista.filter(g => !g.pago);
+    if (state.filtro === "pagos") lista = lista.filter(g => g.pago);
+    if (state.filtro === "fixos") lista = lista.filter(g => g.fixo);
+    lista.sort((a, b) => (b.data || "").localeCompare(a.data || "") || (b.criadoEm || 0) - (a.criadoEm || 0));
+    $("list-count").textContent = lista.length ? money(lista.reduce((s, g) => s + g.valor, 0)) : "";
+
+    const box = $("list");
+    if (!state.carregado) { box.innerHTML = `<div class="card empty"><p>Carregando seus lançamentos…</p></div>`; return; }
+    if (!lista.length) {
+      const anteriorFixos = doMes(shiftMonth(ym, -1)).filter(g => g.fixo).length;
+      box.innerHTML = `<div class="card empty">
+        <strong>${gastos.length ? "Nada neste filtro" : "Nenhum gasto neste mês"}</strong>
+        <p>${gastos.length ? "Troque o filtro acima para ver os outros lançamentos." : "Toque em Novo gasto para lançar o primeiro. Marque como fixo o que se repete todo mês (aluguel, internet, escola)."}</p>
+        ${!gastos.length && anteriorFixos ? `<button class="btn btn-ghost" data-act="copiar-fixos">Trazer ${anteriorFixos} ${anteriorFixos === 1 ? "gasto fixo" : "gastos fixos"} do mês anterior</button>` : ""}
+      </div>`;
+      return;
+    }
+    const grupos = {};
+    lista.forEach(g => (grupos[g.data] = grupos[g.data] || []).push(g));
+    box.innerHTML = Object.keys(grupos).sort((a, b) => b.localeCompare(a)).map(dia => {
+      const itens = grupos[dia];
+      const soma = itens.reduce((s, g) => s + g.valor, 0);
+      const rotulo = dia === today() ? "Hoje" : dayFmt.format(new Date(dia + "T00:00:00Z")).replace(/\./g, "");
+      return `<div class="day">
+        <div class="day-head"><span>${esc(rotulo)}</span><span class="num">${money(soma)}</span></div>
+        <div class="card list">${itens.map(g => {
+          const c = catById(g.categoria);
+          const sigla = c.nome.replace(/[^A-Za-zÀ-ú]/g, "").slice(0, 2).toUpperCase();
+          return `<div class="item" role="button" tabindex="0" data-edit="${esc(g.id)}">
+            <div class="avatar" style="background:${c.cor}">${esc(sigla)}</div>
+            <div class="item-main"><strong>${esc(g.descricao)}${g.fixo ? '<span class="tag-fixo">FIXO</span>' : ""}</strong><span>${esc(c.nome)} · ${esc(g.forma || "—")}</span></div>
+            <div class="item-side"><b class="num">${money(g.valor)}</b>
+              <button class="pill ${g.pago ? "paid" : "open"}" data-toggle="${esc(g.id)}" aria-label="${g.pago ? "Marcar como a pagar" : "Marcar como pago"}">${g.pago ? "Pago" : "A pagar"}</button>
+            </div>
+          </div>`;
+        }).join("")}</div>
+      </div>`;
+    }).join("");
+  }
+
+  // ---------- Folhas ----------
+  function closeSheet() { $("layer").innerHTML = ""; document.body.style.overflow = ""; }
+  function openSheet(html, onMount) {
+    $("layer").innerHTML = `<div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true"><div class="sheet-inner"><div class="grip"></div>${html}</div></div>`;
+    document.body.style.overflow = "hidden";
+    $("layer").querySelector("[data-close]").addEventListener("click", closeSheet);
+    $("layer").querySelectorAll("[data-dismiss]").forEach(b => b.addEventListener("click", closeSheet));
+    onMount && onMount($("layer").querySelector(".sheet-inner"));
+  }
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+
+  function formGasto(g) {
+    const novo = !g;
+    const base = g || { descricao: "", valor: null, categoria: "mercado", data: state.mes === today().slice(0, 7) ? today() : state.mes + "-01", forma: "Pix", pago: true, fixo: false };
+    let cat = base.categoria, forma = base.forma, pago = base.pago;
+    openSheet(`
+      <div class="sheet-head"><h3>${novo ? "Novo gasto" : "Editar gasto"}</h3>
+        <button class="icon-btn" data-dismiss aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <form id="f-gasto" novalidate style="display:flex;flex-direction:column;gap:16px">
+        <div class="field"><label for="g-valor">Valor</label>
+          <div class="money-input"><span>R$</span><input class="input num" id="g-valor" inputmode="decimal" autocomplete="off" placeholder="0,00" value="${esc(fmtInput(base.valor))}"></div></div>
+        <div class="field"><label for="g-desc">Descrição</label>
+          <input class="input" id="g-desc" maxlength="80" autocomplete="off" placeholder="Ex.: Compra no Atacadão" value="${esc(base.descricao)}"></div>
+        <div class="field"><span class="label">Categoria</span>
+          <div class="choice" id="g-cats">${CATS.map(c => `<button type="button" class="chip" data-cat="${c.id}" aria-pressed="${c.id === cat}"><span class="dot" style="background:${c.cor}"></span>${esc(c.nome)}</button>`).join("")}</div></div>
+        <div class="row2">
+          <div class="field"><label for="g-data">Data</label><input class="input" type="date" id="g-data" value="${esc(base.data)}"></div>
+          <div class="field"><label for="g-forma">Pagamento</label>
+            <select class="input" id="g-forma">${FORMAS.map(f => `<option${f === forma ? " selected" : ""}>${f}</option>`).join("")}</select></div>
+        </div>
+        <div class="field"><span class="label">Situação</span>
+          <div class="seg" id="g-pago"><button type="button" data-v="1" aria-pressed="${!!pago}">Pago</button><button type="button" data-v="0" aria-pressed="${!pago}">A pagar</button></div></div>
+        <label class="check"><input type="checkbox" id="g-fixo"${base.fixo ? " checked" : ""}> Gasto fixo (se repete todo mês)</label>
+        <p class="err" id="g-err" hidden></p>
+        <div class="actions">
+          ${novo ? "" : `<button type="button" class="btn btn-danger" id="g-del">Excluir</button>`}
+          <button type="submit" class="btn btn-primary" id="g-save">${novo ? "Lançar gasto" : "Salvar"}</button>
+        </div>
+      </form>`, root => {
+      const valorEl = root.querySelector("#g-valor");
+      if (novo) setTimeout(() => valorEl.focus(), 60);
+      root.querySelector("#g-cats").addEventListener("click", e => {
+        const b = e.target.closest("[data-cat]"); if (!b) return;
+        cat = b.dataset.cat;
+        root.querySelectorAll("#g-cats .chip").forEach(x => x.setAttribute("aria-pressed", x === b));
+      });
+      root.querySelector("#g-pago").addEventListener("click", e => {
+        const b = e.target.closest("[data-v]"); if (!b) return;
+        pago = b.dataset.v === "1";
+        root.querySelectorAll("#g-pago button").forEach(x => x.setAttribute("aria-pressed", x === b));
+      });
+      const del = root.querySelector("#g-del");
+      if (del) del.addEventListener("click", async () => {
+        if (!del.classList.contains("confirm")) { del.classList.add("confirm"); del.textContent = "Confirmar exclusão"; return; }
+        del.disabled = true;
+        try { await state.db.excluir(g.id); closeSheet(); toast("Gasto excluído"); }
+        catch (err) { showErr(root, err); del.disabled = false; }
+      });
+      root.querySelector("#f-gasto").addEventListener("submit", async e => {
+        e.preventDefault();
+        const valor = parseValor(valorEl.value);
+        const descricao = root.querySelector("#g-desc").value.trim();
+        const data = root.querySelector("#g-data").value;
+        const errEl = root.querySelector("#g-err");
+        const fail = m => { errEl.textContent = m; errEl.hidden = false; };
+        if (!(valor > 0)) return fail("Informe um valor maior que zero, por exemplo 89,90.");
+        if (!descricao) return fail("Escreva uma descrição curta para reconhecer o gasto depois.");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return fail("Escolha a data do gasto.");
+        if (!state.db) return fail("Entre na sua conta para salvar.");
+        const body = {
+          descricao, valor, categoria: cat, data, mes: data.slice(0, 7),
+          forma: root.querySelector("#g-forma").value, pago, fixo: root.querySelector("#g-fixo").checked,
+          criadoEm: g?.criadoEm || Date.now(),
+        };
+        const btn = root.querySelector("#g-save"); btn.disabled = true;
+        try {
+          await state.db.salvar(novo ? null : g.id, body);
+          closeSheet();
+          if (body.mes !== state.mes) { state.mes = body.mes; render(); }
+          toast(novo ? "Gasto lançado" : "Gasto salvo");
+        } catch (err) { showErr(root, err); btn.disabled = false; }
+      });
+    });
+  }
+
+  function showErr(root, err) {
+    const el = root.querySelector(".err");
+    if (!el) return toast("Não foi possível salvar");
+    el.hidden = false;
+    el.textContent = err && err.code === "sessao"
+      ? "Sua sessão expirou. Saia e entre de novo."
+      : "Não foi possível salvar agora. Verifique a internet e tente de novo.";
+  }
+
+  function formConfig() {
+    const ym = state.mes;
+    const c = mesConfig(ym);
+    openSheet(`
+      <div class="sheet-head"><h3>Renda e orçamento</h3>
+        <button class="icon-btn" data-dismiss aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <p class="hint">Valores de <b>${esc(monthFmt.format(monthDate(ym)))}</b>. O orçamento é o limite que você quer gastar no mês.</p>
+      <form id="f-config" novalidate style="display:flex;flex-direction:column;gap:16px">
+        <div class="row2">
+          <div class="field"><label for="c-renda">Renda do mês</label><input class="input num" id="c-renda" inputmode="decimal" placeholder="0,00" value="${esc(fmtInput(c.renda))}"></div>
+          <div class="field"><label for="c-orc">Orçamento</label><input class="input num" id="c-orc" inputmode="decimal" placeholder="0,00" value="${esc(fmtInput(c.orcamento))}"></div>
+        </div>
+        <label class="check"><input type="checkbox" id="c-padrao" checked> Usar também nos próximos meses</label>
+        <p class="err" hidden></p>
+        <div class="actions"><button type="submit" class="btn btn-primary" id="c-save">Salvar</button></div>
+      </form>
+      <div class="conta"><span>Conectado como <b>${esc(sessao && sessao.email || "")}</b></span><button type="button" class="btn btn-ghost" id="c-sair" style="min-height:38px;padding:0 14px;font-size:14px">Sair</button></div>`, root => {
+      root.querySelector("#c-sair").addEventListener("click", () => { closeSheet(); sair(); });
+      root.querySelector("#f-config").addEventListener("submit", async e => {
+        e.preventDefault();
+        const renda = parseValor(root.querySelector("#c-renda").value);
+        const orc = parseValor(root.querySelector("#c-orc").value);
+        const errEl = root.querySelector(".err");
+        if (root.querySelector("#c-renda").value && !(renda >= 0)) { errEl.hidden = false; errEl.textContent = "Renda inválida. Use números, como 4.500,00."; return; }
+        if (root.querySelector("#c-orc").value && !(orc >= 0)) { errEl.hidden = false; errEl.textContent = "Orçamento inválido. Use números, como 3.000,00."; return; }
+        if (!state.db) { errEl.hidden = false; errEl.textContent = "Sem conexão com o banco."; return; }
+        const cfg = JSON.parse(JSON.stringify(state.config || {}));
+        cfg.meses = cfg.meses || {};
+        cfg.meses[ym] = { renda: Number.isFinite(renda) ? renda : null, orcamento: Number.isFinite(orc) ? orc : null };
+        if (root.querySelector("#c-padrao").checked) {
+          cfg.rendaPadrao = cfg.meses[ym].renda; cfg.orcamentoPadrao = cfg.meses[ym].orcamento;
+        }
+        const btn = root.querySelector("#c-save"); btn.disabled = true;
+        try { await state.db.salvarConfig(cfg); closeSheet(); toast("Valores salvos"); }
+        catch (err) { showErr(root, err); btn.disabled = false; }
+      });
+    });
+  }
+
+  async function copiarFixos(btn) {
+    if (!state.db) return;
+    const ant = doMes(shiftMonth(state.mes, -1)).filter(g => g.fixo);
+    btn.disabled = true;
+    const [y, m] = state.mes.split("-").map(Number);
+    const ultimo = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    try {
+      for (const g of ant) {
+        const dia = Math.min(Number(g.data.slice(8, 10)) || 1, ultimo);
+        const { id, ...resto } = g;
+        await state.db.salvar(null, { ...resto, data: `${state.mes}-${pad(dia)}`, mes: state.mes, pago: false });
+      }
+      toast(`${ant.length} ${ant.length === 1 ? "gasto fixo trazido" : "gastos fixos trazidos"}`);
+    } catch { toast("Não foi possível copiar agora"); btn.disabled = false; }
+  }
+
+  // ---------- Eventos ----------
+  $("prev").addEventListener("click", () => { state.mes = shiftMonth(state.mes, -1); render(); });
+  $("next").addEventListener("click", () => { state.mes = shiftMonth(state.mes, 1); render(); });
+  $("btn-novo").addEventListener("click", () => formGasto(null));
+  $("btn-config").addEventListener("click", formConfig);
+  document.querySelector(".chips").addEventListener("click", e => {
+    const b = e.target.closest("[data-filter]"); if (!b) return;
+    state.filtro = b.dataset.filter;
+    document.querySelectorAll("[data-filter]").forEach(x => x.setAttribute("aria-pressed", x === b));
+    render();
+  });
+  $("list").addEventListener("click", async e => {
+    const t = e.target.closest("[data-toggle]");
+    if (t) {
+      e.stopPropagation();
+      const g = state.gastos.find(x => x.id === t.dataset.toggle);
+      if (!g || !state.db) return;
+      t.disabled = true;
+      try { await state.db.atualizar(g.id, { pago: !g.pago }); toast(g.pago ? "Marcado como a pagar" : "Marcado como pago"); }
+      catch { toast("Não foi possível atualizar"); t.disabled = false; }
+      return;
+    }
+    const c = e.target.closest("[data-act='copiar-fixos']");
+    if (c) return copiarFixos(c);
+    const it = e.target.closest("[data-edit]");
+    if (it) formGasto(state.gastos.find(x => x.id === it.dataset.edit));
+  });
+  $("list").addEventListener("keydown", e => {
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-edit]")) { e.preventDefault(); e.target.click(); }
+  });
+
+  render();
+
+  // ---------- Banco (Supabase) ----------
+  // Endereço e chave pública do projeto "Finanças Pessoal". A chave publishable
+  // pode ficar no site: quem protege os dados é a RLS de supabase/01-banco-gastos.sql.
+  const SERVIDOR = {
+    url: "__SUPABASE_URL__",
+    chave: "__SUPABASE_CHAVE__",
+  };
+  const CHAVE_SESSAO = "gastos-do-mes.sessao.v1";
+  const CHAVE_COPIA = "gastos-do-mes.copia.v1";
+  const configurado = /^https:\/\/.+\.supabase\.co$/.test(SERVIDOR.url) && SERVIDOR.chave.length > 20;
+
+  const ler = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } };
+  const gravar = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+  let sessao = ler(CHAVE_SESSAO);
+
+  function guardarSessao(j) {
+    sessao = {
+      access: j.access_token,
+      refresh: j.refresh_token,
+      expira: Date.now() + (j.expires_in || 3600) * 1000,
+      uid: j.user ? j.user.id : sessao && sessao.uid,
+      email: j.user ? j.user.email : sessao && sessao.email,
+    };
+    gravar(CHAVE_SESSAO, sessao);
+  }
+
+  async function auth(caminho, corpo) {
+    const r = await fetch(SERVIDOR.url + "/auth/v1/" + caminho, {
+      method: "POST",
+      headers: { apikey: SERVIDOR.chave, "Content-Type": "application/json" },
+      body: JSON.stringify(corpo),
+    });
+    let j = {};
+    try { j = await r.json(); } catch {}
+    return { ok: r.ok, j };
+  }
+
+  // devolve um token válido, renovando quando está perto de vencer
+  async function token() {
+    if (!sessao) return null;
+    if (sessao.expira - Date.now() > 60000) return sessao.access;
+    const { ok, j } = await auth("token?grant_type=refresh_token", { refresh_token: sessao.refresh });
+    if (!ok || !j.access_token) {
+      if (j && (j.error || j.error_code)) { sair(); }
+      return null;
+    }
+    guardarSessao(j);
+    return sessao.access;
+  }
+
+  async function rest(metodo, caminho, corpo, prefer) {
+    const tk = await token();
+    if (!tk) throw { code: "sessao" };
+    const h = { apikey: SERVIDOR.chave, Authorization: "Bearer " + tk, "Content-Type": "application/json" };
+    if (prefer) h.Prefer = prefer;
+    const r = await fetch(SERVIDOR.url + "/rest/v1/" + caminho, { method: metodo, headers: h, body: corpo ? JSON.stringify(corpo) : undefined });
+    if (r.status === 401) throw { code: "sessao" };
+    if (!r.ok) throw { code: "servidor", status: r.status };
+    if (r.status === 204) return null;
+    try { return await r.json(); } catch { return null; }
+  }
+
+  const doBanco = row => ({
+    id: row.id, descricao: row.descricao, valor: Number(row.valor), categoria: row.categoria,
+    data: row.data, mes: row.mes, forma: row.forma, pago: row.pago, fixo: row.fixo,
+    criadoEm: Date.parse(row.criado_em) || 0,
+  });
+  const paraBanco = b => ({
+    descricao: b.descricao, valor: b.valor, categoria: b.categoria, data: b.data,
+    mes: b.mes, forma: b.forma, pago: !!b.pago, fixo: !!b.fixo,
+  });
+  const num = v => (v == null ? null : Number(v));
+
+  function guardarCopia() { gravar(CHAVE_COPIA, { uid: sessao && sessao.uid, gastos: state.gastos, config: state.config }); }
+
+  const api = {
+    async salvar(id, body) {
+      const linhas = id
+        ? await rest("PATCH", "gastos?id=eq." + encodeURIComponent(id), paraBanco(body), "return=representation")
+        : await rest("POST", "gastos", paraBanco(body), "return=representation");
+      const g = doBanco(linhas[0]);
+      state.gastos = state.gastos.filter(x => x.id !== g.id).concat(g);
+      guardarCopia(); render();
+    },
+    async atualizar(id, patch) {
+      const linhas = await rest("PATCH", "gastos?id=eq." + encodeURIComponent(id), patch, "return=representation");
+      const g = doBanco(linhas[0]);
+      state.gastos = state.gastos.map(x => (x.id === g.id ? g : x));
+      guardarCopia(); render();
+    },
+    async excluir(id) {
+      await rest("DELETE", "gastos?id=eq." + encodeURIComponent(id));
+      state.gastos = state.gastos.filter(x => x.id !== id);
+      guardarCopia(); render();
+    },
+    async salvarConfig(cfg) {
+      await rest("POST", "gastos_config", {
+        user_id: sessao.uid,
+        renda_padrao: cfg.rendaPadrao ?? null, orcamento_padrao: cfg.orcamentoPadrao ?? null,
+        meses: cfg.meses || {}, atualizado_em: new Date().toISOString(),
+      }, "resolution=merge-duplicates,return=minimal");
+      state.config = cfg;
+      guardarCopia(); render();
+    },
+  };
+
+  function aviso(txt) { const n = $("notice"); n.hidden = !txt; n.textContent = txt || ""; }
+
+  let carregando = false;
+  async function carregar() {
+    if (carregando || !sessao) return;
+    carregando = true;
+    try {
+      const [linhas, cfg] = await Promise.all([
+        rest("GET", "gastos?select=*&order=data.desc&limit=5000"),
+        rest("GET", "gastos_config?select=*"),
+      ]);
+      state.gastos = (linhas || []).map(doBanco);
+      const c = (cfg || [])[0];
+      state.config = c ? { rendaPadrao: num(c.renda_padrao), orcamentoPadrao: num(c.orcamento_padrao), meses: c.meses || {} } : {};
+      state.carregado = true;
+      aviso("");
+      guardarCopia();
+    } catch (err) {
+      state.carregado = true;
+      if (err && err.code === "sessao" && !sessao) return;
+      aviso(navigator.onLine === false
+        ? "Sem internet. Mostrando a última cópia; para lançar, conecte-se."
+        : "Não foi possível falar com o banco agora. Mostrando a última cópia.");
+    } finally {
+      carregando = false;
+      render();
+    }
+  }
+
+  function mostrar(logado) {
+    $("login").hidden = logado;
+    $("topo").hidden = !logado;
+    $("app").hidden = !logado;
+    $("btn-novo").hidden = !logado;
+  }
+
+  function entrarNoApp() {
+    state.db = api;
+    const copia = ler(CHAVE_COPIA);
+    if (copia && copia.uid === sessao.uid) {
+      state.gastos = copia.gastos || []; state.config = copia.config || {}; state.carregado = true;
+    }
+    mostrar(true);
+    render();
+    carregar();
+  }
+
+  function sair() {
+    const tk = sessao && sessao.access;
+    try { if (tk) fetch(SERVIDOR.url + "/auth/v1/logout", { method: "POST", headers: { apikey: SERVIDOR.chave, Authorization: "Bearer " + tk } }).catch(() => {}); } catch {}
+    sessao = null; gravar(CHAVE_SESSAO, null); gravar(CHAVE_COPIA, null);
+    state.db = null; state.gastos = []; state.config = {}; state.carregado = false;
+    mostrar(false);
+  }
+
+  // ---------- Tela de entrada ----------
+  let criando = false;
+  $("l-troca").addEventListener("click", () => {
+    criando = !criando;
+    $("l-btn").textContent = criando ? "Criar conta" : "Entrar";
+    $("l-troca").textContent = criando ? "Entrar" : "Criar conta";
+    $("l-troca-txt").textContent = criando ? "Já tem conta?" : "Primeira vez aqui?";
+    $("login-sub").textContent = criando ? "Crie sua conta com e-mail e uma senha." : "Entre para ver e lançar seus gastos.";
+    $("l-senha").autocomplete = criando ? "new-password" : "current-password";
+    $("l-err").hidden = true;
+  });
+
+  const traduz = j => {
+    const m = String((j && (j.error_description || j.msg || j.message || j.error)) || "");
+    if (/invalid login credentials/i.test(m)) return "E-mail ou senha incorretos.";
+    if (/already registered|already exists/i.test(m)) return "Esse e-mail já tem conta. Toque em Entrar.";
+    if (/not confirmed/i.test(m)) return "Confirme o e-mail pelo link que chegou na sua caixa de entrada e tente de novo.";
+    if (/at least 6|password should/i.test(m)) return "A senha precisa ter pelo menos 6 caracteres.";
+    if (/rate limit|too many/i.test(m)) return "Muitas tentativas seguidas. Espere um minuto e tente de novo.";
+    if (/invalid.*email|email.*invalid/i.test(m)) return "Esse e-mail não parece válido.";
+    return m ? "Não deu certo: " + m : "Não deu certo. Verifique a internet e tente de novo.";
+  };
+
+  $("f-login").addEventListener("submit", async e => {
+    e.preventDefault();
+    const email = $("l-email").value.trim().toLowerCase();
+    const senha = $("l-senha").value;
+    const err = $("l-err");
+    const fail = m => { err.textContent = m; err.hidden = false; };
+    err.hidden = true;
+    if (!configurado) return fail("O app ainda não está ligado ao banco do Supabase.");
+    if (!/^\S+@\S+\.\S+$/.test(email)) return fail("Digite seu e-mail.");
+    if (senha.length < 6) return fail("A senha precisa ter pelo menos 6 caracteres.");
+    const btn = $("l-btn"); btn.disabled = true;
+    try {
+      const { ok, j } = criando
+        ? await auth("signup", { email, password: senha })
+        : await auth("token?grant_type=password", { email, password: senha });
+      if (!ok) return fail(traduz(j));
+      if (!j.access_token) return fail("Conta criada. Confirme o e-mail pelo link enviado e depois toque em Entrar.");
+      guardarSessao(j);
+      $("l-senha").value = "";
+      entrarNoApp();
+    } catch {
+      fail("Sem conexão. Verifique a internet e tente de novo.");
+    } finally { btn.disabled = false; }
+  });
+
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && state.db) carregar(); });
+  window.addEventListener("online", () => { if (state.db) carregar(); });
+
+  if (sessao && configurado) entrarNoApp();
+  else mostrar(false);
+})();
+</script>
+<script>
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
+</script>
+</body>
+</html>

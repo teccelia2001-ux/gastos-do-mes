@@ -1,0 +1,36 @@
+# O plano gratuito do Supabase pausa o projeto depois de cerca de uma semana sem uso.
+# Esta rotina faz uma consulta pequena ao banco duas vezes por semana para ele
+# continuar ativo. A consulta usa a chave pública, a mesma que já está no index.html;
+# a RLS devolve lista vazia, então nenhum lançamento é lido.
+# Se o banco estiver fora do ar a rotina falha, e o GitHub avisa por e-mail.
+
+name: Manter banco ativo
+
+on:
+  schedule:
+    - cron: "17 12 * * 1,4"   # segunda e quinta, 9h17 em Brasília
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  consultar:
+    runs-on: ubuntu-latest
+    steps:
+      # O GitHub desliga agendamentos de repositórios sem commits há 60 dias.
+      # Reativar a rotina a cada execução reinicia essa contagem.
+      - name: Manter o agendamento ligado
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/manter-banco-ativo.yml/enable"
+
+      - name: Consultar o banco
+        env:
+          URL: https://nkkgrxykcqkbbnibeswr.supabase.co
+          CHAVE: sb_publishable_YVyfmozqs_zvrNUaIAkITA_3JADpsjM
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 30 \
+            --retry 3 --retry-delay 20 --retry-all-errors \
+            "$URL/rest/v1/gastos?select=id&limit=1" -H "apikey: $CHAVE"
